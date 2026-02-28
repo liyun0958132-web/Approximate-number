@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G4 概數魔法尺 - 專業進階版</title>
+    <style>
+        :root {
+            --floor-color: #0d47a1;
+            --ceil-color: #e65100;
+            --round-color: #7b1fa2;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 30px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            width: 1100px;
+            text-align: center;
+        }
+
+        h1 { color: #2c3e50; font-size: 2.5rem; margin-bottom: 10px; }
+        .subtitle { font-size: 1.4rem; color: #666; margin-bottom: 30px; }
+
+        /* 輸入與顯示結果區 */
+        .value-display-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-label { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #555; }
+
+        input[type="number"], .result-box {
+            font-size: 2.5rem;
+            padding: 10px;
+            width: 160px;
+            border-radius: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        input[type="number"] {
+            border: 5px solid #4a90e2;
+            background-color: #e3f2fd;
+        }
+
+        .result-box {
+            border: 5px solid #4caf50;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+        }
+
+        .arrow-icon { font-size: 3rem; color: #999; margin-top: 30px; }
+
+        /* 數線區域 */
+        .ruler-viewport {
+            width: 1000px;
+            height: 200px;
+            margin: 20px auto 60px auto;
+            position: relative;
+            background: #fff;
+        }
+
+        #arrow-wrapper {
+            position: absolute;
+            top: 40px; 
+            transform: translateX(-50%); 
+            transition: left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #value-bubble {
+            background: #f44336;
+            color: white;
+            padding: 8px 25px;
+            border-radius: 15px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        #arrow-head {
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 20px solid #f44336; 
+            margin-top: -1px; 
+        }
+
+        .ruler-base {
+            position: absolute;
+            top: 130px;
+            width: 1000px;
+            height: 4px;
+            background: #333;
+        }
+
+        .tick { position: absolute; top: 0; width: 2px; background: #ccc; }
+        .tick.normal { height: 12px; width: 1px; }
+        .tick.ten { height: 45px; width: 4px; background: #333; }
+
+        .tick-num {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            color: #000;
+            font-weight: bold;
+        }
+
+        #highlight-bar {
+            position: absolute;
+            top: 130px;
+            height: 12px;
+            border-radius: 6px;
+            transition: 0.6s;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        /* 按鈕區 */
+        .btns { margin: 20px 0; display: flex; justify-content: center; gap: 15px; }
+        button {
+            padding: 15px 25px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.1);
+            transition: 0.2s;
+        }
+        .btn-floor { background-color: var(--floor-color); }
+        .btn-ceil { background-color: var(--ceil-color); }
+        .btn-round { background-color: var(--round-color); }
+        button:active { transform: translateY(3px); box-shadow: none; }
+
+        /* 對話框 */
+        .dialog {
+            background: #fff9c4;
+            border: 4px dashed #f9a825;
+            border-radius: 20px;
+            padding: 20px;
+            width: 950px;
+            margin: 0 auto;
+            text-align: left;
+        }
+        #info { font-size: 1.5rem; line-height: 1.6; color: #333; }
+
+        .glow { color: #ff5252 !important; text-shadow: 0 0 10px gold; transform: translateX(-50%) scale(1.2); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎯 概數魔法尺</h1>
+    <div class="subtitle">取概數到「十位」練習</div>
+    
+    <div class="value-display-area">
+        <div class="input-group">
+            <div class="input-label">原本的數字</div>
+            <input type="number" id="valIn" value="65" min="0" max="100" oninput="sync()">
+        </div>
+        
+        <div class="arrow-icon">➡</div>
+
+        <div class="input-group">
+            <div class="input-label">概數後的結果</div>
+            <div id="resultOutput" class="result-box">?</div>
+        </div>
+    </div>
+
+    <div class="ruler-viewport">
+        <div id="arrow-wrapper">
+            <div id="value-bubble">65</div>
+            <div id="arrow-head"></div>
+        </div>
+        <div id="highlight-bar"></div>
+        <div class="ruler-base" id="ruler"></div>
+    </div>
+
+    <div class="btns">
+        <button class="btn-floor" onclick="calc('floor')">⬇️ 無條件捨去法</button>
+        <button class="btn-ceil" onclick="calc('ceil')">⬆️ 無條件進入法</button>
+        <button class="btn-round" onclick="calc('round')">⚖️ 四捨五入法</button>
+    </div>
+
+    <div class="dialog">
+        <div id="info">💡 請在藍色框框輸入數字，再點選下方的概數方法吧！</div>
+    </div>
+</div>
+
+<script>
+    const ruler = document.getElementById('ruler');
+    const arrowWrapper = document.getElementById('arrow-wrapper');
+    const valueBubble = document.getElementById('value-bubble');
+    const resultOutput = document.getElementById('resultOutput');
+    const highlightBar = document.getElementById('highlight-bar');
+    const valIn = document.getElementById('valIn');
+    const info = document.getElementById('info');
+    
+    const STEP = 10; 
+
+    function init() {
+        for (let i = 0; i <= 100; i++) {
+            const tick = document.createElement('div');
+            tick.style.left = (i * STEP) + 'px';
+            if (i % 10 === 0) {
+                tick.className = 'tick ten';
+                const num = document.createElement('div');
+                num.className = 'tick-num';
+                num.id = 'num-' + i;
+                num.innerText = i;
+                tick.appendChild(num);
+            } else {
+                tick.className = 'tick normal';
+            }
+            ruler.appendChild(tick);
+        }
+    }
+
+    function sync() {
+        let v = parseInt(valIn.value);
+        if (isNaN(v)) v = 0;
+        if (v > 100) v = 100;
+        if (v < 0) v = 0;
+
+        arrowWrapper.style.left = (v * STEP) + 'px';
+        valueBubble.innerText = v;
+        resultOutput.innerText = "?"; // 輸入時重置結果
+        
+        highlightBar.style.opacity = 0;
+        document.querySelectorAll('.tick-num').forEach(n => n.classList.remove('glow'));
+    }
+
+    function calc(type) {
+        let original = parseInt(valIn.value) || 0;
+        let result = 0;
+        let color = "";
+        let msg = "";
+
+        switch(type) {
+            case 'floor':
+                result = Math.floor(original / 10) * 10;
+                color = "var(--floor-color)";
+                msg = `<b>【無條件捨去法】</b>：我們要把個位數的 ${original % 10} 直接丟掉。指標往後退到 <b>${result}</b>。`;
+                showHighlight(result, original, color);
+                break;
+            case 'ceil':
+                result = Math.ceil(original / 10) * 10;
+                color = "var(--ceil-color)";
+                msg = `<b>【無條件進入法】</b>：只要有個位數，就要往上進一位。指標前進到 <b>${result}</b>。`;
+                showHighlight(original, result, color);
+                break;
+            case 'round':
+                result = Math.round(original / 10) * 10;
+                color = "var(--round-color)";
+                let unit = original % 10;
+                msg = `<b>【四捨五入法】</b>：個位是 ${unit}。${unit >= 5 ? '滿 5 了，往前進' : '不到 5，往後退'}，最近的是 <b>${result}</b>。`;
+                if(result > original) showHighlight(original, result, color);
+                else showHighlight(result, original, color);
+                break;
+        }
+
+        // 更新視覺
+        document.getElementById('arrow-head').style.borderTopColor = color;
+        valueBubble.style.backgroundColor = color;
+        
+        // 更新結果欄位
+        resultOutput.innerText = result;
+        
+        // 移動箭頭到結果位置
+        arrowWrapper.style.left = (result * STEP) + 'px';
+        
+        info.innerHTML = msg;
+        const label = document.getElementById('num-' + result);
+        if (label) label.classList.add('glow');
+    }
+
+    function showHighlight(start, end, color) {
+        highlightBar.style.opacity = 0.4;
+        highlightBar.style.backgroundColor = color;
+        highlightBar.style.left = (start * STEP) + 'px';
+        highlightBar.style.width = ((end - start) * STEP) + 'px';
+    }
+
+    init();
+    sync();
+</script>
+
+</body>
+</html>
