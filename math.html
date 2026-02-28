@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>概數魔法師：情境挑戰版</title>
+    <style>
+        :root {
+            --floor-color: #0d47a1; --ceil-color: #e65100; --round-color: #7b1fa2; --bg-color: #f4f7f9;
+        }
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+
+        /* 入口選單 */
+        #menu-screen { text-align: center; background: white; padding: 40px; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 850px; }
+        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 30px; }
+        .menu-card { padding: 25px; border-radius: 15px; color: white; cursor: pointer; transition: 0.3s; text-align: left; position: relative; overflow: hidden; }
+        .menu-card:hover { transform: translateX(10px); }
+        .menu-card h3 { margin: 0; font-size: 1.6rem; }
+
+        /* 主工具介面 */
+        #tool-screen { display: none; width: 1050px; background: white; padding: 30px; border-radius: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); text-align: center; }
+        .comparison-area { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px; }
+        .input-group { display: flex; flex-direction: column; align-items: center; }
+        input[type="number"], .result-field { font-size: 2.8rem; width: 150px; height: 80px; border-radius: 20px; text-align: center; line-height: 80px; font-weight: bold; border: 5px solid #ddd; }
+        #inputNum { border-color: #4a90e2; background: #e3f2fd; }
+        .result-field { border-color: #4caf50; background: #e8f5e9; color: #2e7d32; }
+
+        /* 數線區域：修正尖端位置 */
+        .ruler-viewport { width: 1000px; height: 180px; margin: 20px auto 40px auto; position: relative; }
+        #arrow-wrapper { position: absolute; top: 40px; transform: translateX(-50%); transition: left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 10; display: flex; flex-direction: column; align-items: center; }
+        #value-bubble { background: #f44336; color: white; padding: 8px 20px; border-radius: 12px; font-size: 2.2rem; font-weight: bold; }
+        #arrow-head { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 18px solid #f44336; margin-top: -1px; }
+        .ruler-line { position: absolute; top: 115px; width: 1000px; height: 4px; background: #333; }
+        .tick { position: absolute; top: 0; width: 2px; background: #ccc; height: 12px; }
+        .tick.ten { height: 45px; width: 4px; background: #000; }
+        .tick-num { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); font-size: 22px; font-weight: bold; }
+        #highlight-segment { position: absolute; top: 115px; height: 8px; border-radius: 4px; transition: 0.6s; opacity: 0; z-index: 1; }
+
+        /* 分水嶺標記 */
+        #mid-line { position: absolute; top: 90px; height: 40px; width: 2px; border-left: 2px dashed #9c27b0; display: none; left: 450px; }
+
+        /* 三大按鈕 */
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .btn-logic { padding: 15px; font-size: 1.2rem; font-weight: bold; color: white; border: none; border-radius: 15px; cursor: pointer; box-shadow: 0 5px 0 rgba(0,0,0,0.1); }
+        .btn-floor { background: var(--floor-color); }
+        .btn-ceil { background: var(--ceil-color); }
+        .btn-round { background: var(--round-color); }
+        
+        /* 提示與反饋 */
+        #explanation { background: #fffde7; border: 3px dashed #fbc02d; border-radius: 20px; padding: 20px; font-size: 1.4rem; min-height: 60px; }
+        #visual-impact { position: absolute; top: -50px; font-size: 3rem; display: none; transition: 0.3s; }
+    </style>
+</head>
+<body>
+
+<div id="menu-screen">
+    <h1>👑 概數魔法師挑戰</h1>
+    <p>請選擇一個生活任務：</p>
+    <div class="menu-grid">
+        <div class="menu-card" style="background: var(--floor-color);" onclick="startChallenge('floor')">
+            <h3>🛒 超市結帳</h3>
+            <p>老闆說個位數不用算，要準備多少錢？</p>
+        </div>
+        <div class="menu-card" style="background: var(--ceil-color);" onclick="startChallenge('ceil')">
+            <h3>🚌 校外教學</h3>
+            <p>一台車載 10 人，有 43 人要去，要叫幾台車？</p>
+        </div>
+        <div class="menu-card" style="background: var(--round-color);" onclick="startChallenge('round')">
+            <h3>📏 估計長度</h3>
+            <p>這根繩子大約是幾十公分？哪邊比較近？</p>
+        </div>
+    </div>
+</div>
+
+<div id="tool-screen">
+    <h2 id="quest-title">任務中...</h2>
+    <div class="comparison-area">
+        <div class="box"><div class="label">題目數字</div><input type="number" id="inputNum" value="43" oninput="sync()"></div>
+        <div style="font-size: 2rem; color: #999;">➜</div>
+        <div class="box"><div class="label">你的答案</div><div id="resultView" class="result-field">?</div></div>
+    </div>
+
+    <div class="ruler-viewport">
+        <div id="mid-line"></div>
+        <div id="arrow-wrapper">
+            <div id="visual-impact">🏃💨</div>
+            <div id="value-bubble">43</div>
+            <div id="arrow-head"></div>
+        </div>
+        <div id="highlight-segment"></div>
+        <div class="ruler-line" id="rulerBody"></div>
+    </div>
+
+    <p>請選擇正確的概數方法：</p>
+    <div class="btn-grid">
+        <button class="btn-logic btn-floor" onclick="check('floor')">無條件捨去法</button>
+        <button class="btn-logic btn-ceil" onclick="check('ceil')">無條件進入法</button>
+        <button class="btn-logic btn-round" onclick="check('round')">四捨五入法</button>
+    </div>
+
+    <div id="explanation">💡 觀察情境，選錯了魔法會失敗喔！</div>
+    <button style="margin-top:20px;" onclick="location.reload()">⬅ 返回選單</button>
+</div>
+
+<script>
+    let correctMethod = '';
+    const inputNum = document.getElementById('inputNum');
+    const resultView = document.getElementById('resultView');
+    const arrowWrapper = document.getElementById('arrow-wrapper');
+    const valueBubble = document.getElementById('value-bubble');
+    const explanation = document.getElementById('explanation');
+    const visualImpact = document.getElementById('visual-impact');
+
+    function startChallenge(mode) {
+        correctMethod = mode;
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('tool-screen').style.display = 'block';
+        
+        const titles = {
+            'floor': '🛒 任務：去超市買東西，老闆說去零頭。',
+            'ceil': '🚌 任務：校外教學要叫車，每台載10人。',
+            'round': '📏 任務：量量看，這根繩子大約是多少？'
+        };
+        document.getElementById('quest-title').innerText = titles[mode];
+        document.getElementById('mid-line').style.display = (mode === 'round' ? 'block' : 'none');
+        initRuler();
+        sync();
+    }
+
+    function initRuler() {
+        const body = document.getElementById('rulerBody');
+        for (let i = 0; i <= 100; i++) {
+            const t = document.createElement('div');
+            t.style.left = (i * 10) + 'px';
+            t.className = (i % 10 === 0) ? 'tick ten' : 'tick';
+            if (i % 10 === 0) {
+                const n = document.createElement('div');
+                n.className = 'tick-num'; n.innerText = i;
+                t.appendChild(n);
+            }
+            body.appendChild(t);
+        }
+    }
+
+    function sync() {
+        let v = parseInt(inputNum.value) || 0;
+        arrowWrapper.style.left = (v * 10) + 'px';
+        valueBubble.innerText = v;
+        resultView.innerText = "?";
+        explanation.innerText = "請選擇按鈕...";
+        visualImpact.style.display = 'none';
+    }
+
+    function check(userMethod) {
+        let val = parseInt(inputNum.value) || 0;
+        let res = 0;
+        let isCorrect = (userMethod === correctMethod);
+        
+        // 計算結果
+        if(userMethod === 'floor') res = Math.floor(val/10)*10;
+        else if(userMethod === 'ceil') res = Math.ceil(val/10)*10;
+        else res = Math.round(val/10)*10;
+
+        // 視覺回饋
+        resultView.innerText = res;
+        arrowWrapper.style.left = (res * 10) + 'px';
+        
+        if (isCorrect) {
+            explanation.innerHTML = `✅ <b>正確！</b> 這就是最好的處理方式。結果是 <b>${res}</b>。`;
+            visualImpact.innerText = "🌟";
+        } else {
+            handleError(userMethod, val, res);
+        }
+        visualImpact.style.display = 'block';
+    }
+
+    function handleError(method, val, res) {
+        if (correctMethod === 'ceil' && method === 'floor') {
+            explanation.innerHTML = `❌ <b>不對喔！</b> 如果用捨去法，結果只有 <b>${res}</b>...`;
+            visualImpact.innerText = "😰 有 ${val % 10} 個人被丟在路邊沒車搭！";
+        } else if (correctMethod === 'floor' && method === 'ceil') {
+            explanation.innerHTML = `❌ <b>哎呀！</b> 老闆說不用算零頭，你卻給了 <b>${res}</b> 元，多付錢囉！`;
+            visualImpact.innerText = "💸";
+        } else if (correctMethod === 'round') {
+            let dist = Math.abs(val - res);
+            explanation.innerHTML = `❌ <b>想一想：</b> 距離 <b>${res}</b> 好像不是最近的喔！`;
+            visualImpact.innerText = "📏?";
+        } else {
+            explanation.innerHTML = `❌ <b>這個方法在現在的情況下不太合適。</b> 再試一次！`;
+            visualImpact.innerText = "❓";
+        }
+    }
+</script>
+</body>
+</html>
